@@ -1,94 +1,82 @@
 import { TodoManager } from "./todo-manager.js";
-import { Storage } from "./storage.js";
 import { DOM } from "./dom-elements.js";
+import { Storage } from "./storage.js";
 
 class AppManager {
   constructor() {
     this.storage = new Storage();
     this.todoManager = new TodoManager(this.storage);
     this.dom = new DOM();
-
-    this.selectedProject = "default";
+    this.currentProject = "default";
   }
 
   init() {
-    this.dom.renderProjects(this.todoManager.getProjects());
-    this.dom.renderTodos(
-      this.todoManager.getTodosByProject(this.selectedProject),
-      this.selectedProject
-    );
+    // initial render
+    this.renderProjects();
+    this.renderTodosForCurrentProject();
 
-    this.dom.on("add-project", (projectName) => {
-      this.todoManager.addProject(projectName);
-      this.dom.renderProjects(this.todoManager.getProjects());
+    // wire buttons
+    this.dom.setupAddProjectButton();
+    this.dom.setupAddTodoButton();
+
+    // project events
+    this.dom.on("add-project", (projectKey) => {
+      this.todoManager.addProject(projectKey);
+      this.renderProjects();
     });
 
-    this.dom.on("select-project", (projectName) => {
-      this.selectedProject = projectName;
-      this.dom.renderTodos(
-        this.todoManager.getTodosByProject(this.selectedProject),
-        this.selectedProject
-      );
+    this.dom.on("select-project", (projectKey) => {
+      this.currentProject = projectKey;
+      this.renderProjects();
+      this.renderTodosForCurrentProject();
     });
 
-    this.dom.on("add-todo", (todoData, projectName) => {
-      this.todoManager.addTodo(todoData, projectName || this.selectedProject);
-      this.dom.renderTodos(
-        this.todoManager.getTodosByProject(this.selectedProject),
-        this.selectedProject
-      );
+    this.dom.on("delete-project", (projectKey) => {
+      this.todoManager.removeProject(projectKey);
+      if (this.currentProject === projectKey) this.currentProject = "default";
+      this.renderProjects();
+      this.renderTodosForCurrentProject();
     });
 
-    this.dom.on("toggle-todo", (projectName, todoId) => {
-      this.todoManager.updateTodo(projectName, todoId, {
-        completed: !this._getTodoCompleted(projectName, todoId),
-      });
-      this.dom.renderTodos(
-        this.todoManager.getTodosByProject(this.selectedProject),
-        this.selectedProject
-      );
+    // todo events
+    this.dom.on("add-todo", (todoData, projectKey) => {
+      this.todoManager.addTodo(todoData, projectKey || this.currentProject);
+      this.renderTodosForCurrentProject();
     });
 
-    this.dom.on("delete-todo", (projectName, todoId) => {
-      this.todoManager.removeTodo(projectName, todoId);
-      this.dom.renderTodos(
-        this.todoManager.getTodosByProject(this.selectedProject),
-        this.selectedProject
-      );
+    this.dom.on("toggle-todo", (projectKey, todoId) => {
+      this.todoManager.toggleTodo(projectKey, todoId);
+      this.renderTodosForCurrentProject();
     });
 
-    const addTodoForm = document.getElementById("add-todo-form");
-    if (addTodoForm) {
-      addTodoForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const title = e.target.querySelector('[name="title"]').value;
-        const description =
-          e.target.querySelector('[name="description"]')?.value || "";
-        this.dom.trigger(
-          "add-todo",
-          { title, description },
-          this.selectedProject
-        );
-        addTodoForm.reset();
-      });
-    }
+    this.dom.on("delete-todo", (projectKey, todoId) => {
+      this.todoManager.removeTodo(projectKey, todoId);
+      this.renderTodosForCurrentProject();
+    });
 
-    const addBtn = document.getElementById("add-todo-btn");
-    const addInput = document.getElementById("add-todo-input");
-    if (addBtn && addInput) {
-      addBtn.addEventListener("click", () => {
-        const title = addInput.value.trim();
-        if (!title) return;
-        this.dom.trigger("add-todo", { title }, this.selectedProject);
-        addInput.value = "";
-      });
-    }
+    this.dom.on("edit-todo", (projectKey, todoId) => {
+      // simple edit flow using prompt (keeps minimal)
+      const todos = this.todoManager.getTodosByProject(projectKey);
+      const todo = todos.find((t) => t.id === todoId);
+      if (!todo) return;
+      const title = prompt("Title:", todo.title);
+      const description = prompt("Description:", todo.description);
+      const dueDate = prompt("Due date (YYYY-MM-DD):", todo.dueDate);
+      const priority = prompt("Priority:", todo.priority);
+      const completed = confirm("Mark completed?");
+      this.todoManager.updateTodo(projectKey, todoId, { title, description, dueDate, priority, completed });
+      this.renderTodosForCurrentProject();
+    });
   }
 
-  _getTodoCompleted(projectName, todoId) {
-    const todos = this.todoManager.getTodosByProject(projectName);
-    const t = todos.find((x) => x.id === todoId);
-    return t ? t.completed : false;
+  renderProjects() {
+    const projects = this.todoManager.getProjects();
+    this.dom.renderProjects(projects, this.currentProject);
+  }
+
+  renderTodosForCurrentProject() {
+    const todos = this.todoManager.getTodosByProject(this.currentProject);
+    this.dom.renderTodos(todos, this.currentProject);
   }
 }
 

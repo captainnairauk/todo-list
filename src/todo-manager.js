@@ -1,117 +1,103 @@
-import { Project } from "./project-class.js";
 import Todo from "./todo-class.js";
+import { Project } from "./project-class.js";
 
 class TodoManager {
   constructor(storage) {
     this.storage = storage;
-    const raw = this.storage.get("projects");
-    this.projects = {}; 
-    if (raw) {
-      this._rehydrateProjects(raw);
-    } else {
-      this.projects = {};
-    }
+    // load raw stored object (plain JSON)
+    const saved = this.storage.get("projects") || {};
+    this.projects = {};
+
+    // Recreate Project/Todo instances
+    Object.keys(saved).forEach((key) => {
+      const rawProj = saved[key];
+      const project = new Project(rawProj.name || key);
+      const rawTodos = Array.isArray(rawProj.todos) ? rawProj.todos : [];
+      rawTodos.forEach((rt) => {
+        project.addTodo(rt); // project.addTodo handles plain object -> Todo instance
+      });
+      this.projects[key] = project;
+    });
+
     this.initDefaultProject();
   }
 
   initDefaultProject() {
     if (!this.projects.default) {
-      this.projects.default = new Project("default");
+      this.projects.default = new Project("Default");
       this.save();
     }
-  }
-
-  _rehydrateProjects(rawProjects) {
-    this.projects = {};
-    Object.keys(rawProjects).forEach((key) => {
-      const rawProject = rawProjects[key];
-      const proj = new Project(rawProject.name || key);
-      const rawTodos = Array.isArray(rawProject.todos) ? rawProject.todos : [];
-      rawTodos.forEach((rt) => {
-        const todoInstance = new Todo(
-          rt.title || "",
-          rt.description || "",
-          rt.dueDate || null,
-          rt.priority || null
-        );
-        if (rt.id) todoInstance.id = rt.id;
-        else todoInstance.id = crypto?.randomUUID?.() ?? Date.now().toString();
-
-        
-        if (rt.completed) {
-          todoInstance.toggleComplete();
-        }
-        proj.addTodo(todoInstance);
-      });
-      this.projects[key] = proj;
-    });
   }
 
   getProjects() {
     return this.projects;
   }
 
-  getTodosByProject(projectName) {
-    const project = this.projects[projectName];
+  getTodosByProject(projectKey = "default") {
+    const project = this.projects[projectKey];
     return project ? project.getTodos() : [];
   }
 
-  addProject(projectName) {
-    if (!this.projects[projectName]) {
-      this.projects[projectName] = new Project(projectName);
+  addProject(projectKey) {
+    if (!this.projects[projectKey]) {
+      this.projects[projectKey] = new Project(projectKey);
       this.save();
       return true;
     }
     return false;
   }
 
-  addTodo(todoData, projectName = "default") {
-    const project = this.projects[projectName];
-    if (!project) return false;
+  removeProject(projectKey) {
+    if (projectKey !== "default" && this.projects[projectKey]) {
+      delete this.projects[projectKey];
+      this.save();
+      return true;
+    }
+    return false;
+  }
 
+  addTodo(todoData, projectKey = "default") {
+    const project = this.projects[projectKey];
+    if (!project) return null;
     const todo = new Todo(
       todoData.title || "",
       todoData.description || "",
       todoData.dueDate || null,
       todoData.priority || null
     );
-    todo.id = crypto?.randomUUID?.() ?? Date.now().toString();
-
-
-    if (todoData.completed) todo.toggleComplete();
-
+    if (todoData.completed) todo.completed = !!todoData.completed;
     project.addTodo(todo);
     this.save();
     return todo;
   }
 
-  removeTodo(projectName, todoId) {
-    const project = this.projects[projectName];
+  removeTodo(projectKey, todoId) {
+    const project = this.projects[projectKey];
     if (!project) return false;
     project.removeTodo(todoId);
     this.save();
     return true;
   }
 
-  updateTodo(projectName, todoId, updates = {}) {
-    const project = this.projects[projectName];
+  updateTodo(projectKey, todoId, updatedData) {
+    const project = this.projects[projectKey];
     if (!project) return false;
-    const todo = project.getTodos().find((t) => t.id === todoId);
-    if (!todo) return false;
-
-    
-    if (updates.title !== undefined) todo.title = updates.title;
-    if (updates.description !== undefined)
-      todo.description = updates.description;
-    if (updates.dueDate !== undefined) todo.dueDate = updates.dueDate;
-    if (updates.priority !== undefined) todo.priority = updates.priority;
-    if (updates.completed !== undefined) {
-      if (todo.completed !== updates.completed) todo.toggleComplete();
-    }
+    project.updateTodo(todoId, updatedData);
     this.save();
     return true;
   }
 
+  toggleTodo(projectKey, todoId) {
+    const project = this.projects[projectKey];
+    if (!project) return false;
+    const todo = project.getTodos().find((t) => t.id === todoId);
+    if (!todo) return false;
+    todo.toggleComplete();
+    this.save();
+    return true;
+  }
+
+  // Save only plain serializable data (not class instances) so rehydration works reliably
   save() {
     const serializable = {};
     Object.keys(this.projects).forEach((key) => {
@@ -124,7 +110,7 @@ class TodoManager {
           description: t.description,
           dueDate: t.dueDate,
           priority: t.priority,
-          completed: t.completed,
+          completed: !!t.completed,
         })),
       };
     });
