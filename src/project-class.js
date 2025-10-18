@@ -1,4 +1,4 @@
-import { Todo } from "./todo-class.js";
+import Todo  from "./todo-class.js";
 
 class Project {
   constructor(name) {
@@ -9,11 +9,23 @@ class Project {
   addTodo(todo) {
     if (todo instanceof Todo) {
       this.todos.push(todo);
+    }else if (todo && typeof todo === "object"){
+        const t = new Todo(
+            todo.title || "",
+            todo.description || "",
+            todo.dueDate || null,
+            todo.priority || null
+        );
+
+        if(todo.id) t.id = todo.id;
+
+        if(todo.completed) t.toggleComplete();
+        this.todos.push(t);
     }
   }
 
   removeTodo(todoId) {
-    this.todos = this.todos.filter((todo) => todo.id != todoId);
+    this.todos = this.todos.filter((todo) => todo.id !== todoId);
   }
 
   getTodos() {
