@@ -4,29 +4,33 @@ class DOM {
   }
 
   on(event, callback) {
-    if (!this.eventListeners[event]) {
-      this.eventListeners[event] = [];
-    }
+    if (!this.eventListeners[event]) this.eventListeners[event] = [];
     this.eventListeners[event].push(callback);
   }
 
   trigger(event, ...data) {
     if (this.eventListeners[event]) {
-      this.eventListeners[event].forEach((callback) => callback(...data));
+      this.eventListeners[event].forEach((cb) => cb(...data));
     }
   }
 
   renderProjects(projects) {
     const projectList = document.getElementById("project-list");
+    if (!projectList) return;
+
     projectList.innerHTML = "";
-    projectList.forEach((project) => {
+
+    const arr = Object.values(projects);
+
+    arr.forEach((project) => {
       const li = document.createElement("li");
-      li.textContent = project.name;
-      //Add other project elements and event handling here
+      li.className = "project-item";
+      li.textContent = project.name || project;
+      li.onclick = () => this.trigger("select-project", project.name);
+
       projectList.appendChild(li);
     });
 
-    //Add event listener for adding a project
     const addProjectBtn = document.getElementById("add-project-btn");
     if (addProjectBtn) {
       addProjectBtn.onclick = () => {
@@ -38,13 +42,54 @@ class DOM {
     }
   }
 
-  renderTodos(todos) {
+  renderTodos(todos = [], projectName = "default") {
     const todoList = document.getElementById("todo-list");
+    if (!todoList) return;
+
     todoList.innerHTML = "";
-    todos.forEach((todos) => {
+
+    todos.forEach((todo) => {
       const li = document.createElement("li");
-      li.textContent = todo.title;
-      //Add other todo elements and event handling here
+      li.className = "todo-item";
+
+      const left = document.createElement("div");
+      left.className = "todo-left";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = !!todo.completed;
+      checkbox.addEventListener("change", () =>
+        this.trigger("toggle-todo", projectName, todo.id)
+      );
+
+      const titleSpan = document.createElement("span");
+      titleSpan.textContent = todo.title || "(no title)";
+      if (todo.completed) titleSpan.classList.add("completed");
+
+      left.appendChild(checkbox);
+      left.appendChild(titleSpan);
+
+      const right = document.createElement("div");
+      right.className = "todo-right";
+
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "Delete";
+      delBtn.addEventListener("click", () =>
+        this.trigger("delete-todo", projectName, todo.id)
+      );
+
+      const editBtn = document.createElement("button");
+      editBtn.textContent = "Edit";
+      editBtn.addEventListener("click", () =>
+        this.trigger("edit-todo", projectName, todo.id)
+      );
+
+      right.appendChild(editBtn);
+      right.appendChild(delBtn);
+
+      li.appendChild(left);
+      li.appendChild(right);
+
       todoList.appendChild(li);
     });
   }

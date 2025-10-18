@@ -1,12 +1,20 @@
-// modules/todo-class.js
-export class Todo {
-  constructor(title) {
-    this.id = Date.now().toString();
-    this.title = title.trim();
-    this.completed = false;
-  }
+class Todo{
+    #completed = false;
 
-  toggle() {
-    this.completed = !this.completed;
-  }
+    constructor(title, description, dueDate, priority){
+        this.title = title;
+        this.description = description;
+        this.dueDate = dueDate;
+        this.priority = priority;
+    }
+
+    get completed(){
+        return this.#completed;
+    }
+
+    toggleComplete(){
+        this.#completed = !this.#completed;
+    }
 }
+
+export default Todo;

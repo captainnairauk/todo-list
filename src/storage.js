@@ -1,4 +1,4 @@
-class Storage {
+export class Storage {
   get(key) {
     try {
       const serializedData = localStorage.getItem(key);
@@ -34,5 +34,3 @@ class Storage {
     }
   }
 }
-
-export { Storage };
