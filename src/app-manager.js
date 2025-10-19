@@ -64,7 +64,13 @@ class AppManager {
       const dueDate = prompt("Due date (YYYY-MM-DD):", todo.dueDate);
       const priority = prompt("Priority:", todo.priority);
       const completed = confirm("Mark completed?");
-      this.todoManager.updateTodo(projectKey, todoId, { title, description, dueDate, priority, completed });
+      this.todoManager.updateTodo(projectKey, todoId, {
+        title,
+        description,
+        dueDate,
+        priority,
+        completed,
+      });
       this.renderTodosForCurrentProject();
     });
   }

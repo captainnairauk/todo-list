@@ -63,7 +63,7 @@ class TodoManager {
       todoData.title || "",
       todoData.description || "",
       todoData.dueDate || null,
-      todoData.priority || null
+      todoData.priority || null,
     );
     if (todoData.completed) todo.completed = !!todoData.completed;
     project.addTodo(todo);

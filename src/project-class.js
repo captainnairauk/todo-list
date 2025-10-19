@@ -1,4 +1,4 @@
-import Todo  from "./todo-class.js";
+import Todo from "./todo-class.js";
 
 class Project {
   constructor(name) {
@@ -14,7 +14,7 @@ class Project {
         todo.title || "",
         todo.description || "",
         todo.dueDate || null,
-        todo.priority || null
+        todo.priority || null,
       );
 
       if (todo.id) t.id = todo.id;
